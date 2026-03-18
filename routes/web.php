@@ -2,17 +2,25 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use App\Livewire\Frontend\LandingPage;
 use App\Livewire\Admin\Akademik\AkademikManager;
 use App\Livewire\Guru\AbsensiSantri;
 use App\Livewire\Auth\RegisterWaliSantri;
 use App\Livewire\WaliSantri\Dashboard as WaliSantriDashboard;
+
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 */
+
+
+Route::get('/linkstorage', function () {
+    Artisan::call('storage:link');
+});
 
 // Halaman utama publik (Landing Page Madrasah)
 Route::get('/', LandingPage::class)->name('home');
