@@ -5,6 +5,8 @@ namespace App\Livewire\Admin\Akademik;
 use App\Models\Guru;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 class GuruManager extends Component
 {
@@ -31,7 +33,11 @@ class GuruManager extends Component
     }
 
     private function resetInput() {
-        $this->nip = ''; $this->nama_guru = ''; $this->mapel = ''; $this->no_hp = ''; $this->id_guru = null;
+        $this->nip = ''; 
+        $this->nama_guru = ''; 
+        $this->mapel = ''; 
+        $this->no_hp = ''; 
+        $this->id_guru = null;
     }
 
     public function store() {
@@ -47,9 +53,39 @@ class GuruManager extends Component
             'no_hp' => $this->no_hp,
         ]);
 
-        session()->flash('message', $this->id_guru ? 'Guru diperbarui.' : 'Guru ditambahkan.');
+        session()->flash('message', $this->id_guru ? 'Data Guru berhasil diperbarui.' : 'Data Guru berhasil ditambahkan.');
         $this->closeModal();
         $this->resetInput();
+    }
+
+    // Penghapusan normal dengan proteksi Foreign Key
+    public function delete($id) {
+        try {
+            Guru::findOrFail($id)->delete();
+            session()->flash('message', 'Data Guru berhasil dihapus.');
+        } catch (QueryException $e) {
+            // Cek apakah error karena relasi data (Foreign Key Constraint 1451)
+            if ($e->getCode() == '23000') {
+                session()->flash('error', 'Gagal menghapus! Guru tidak bisa dihapus karena masih terhubung dengan data Jadwal. Gunakan tombol "Paksa Hapus" jika ingin menghapus semua.');
+            } else {
+                session()->flash('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
+            }
+        }
+    }
+
+    // Penghapusan paksa beserta relasi jadwalnya
+    public function forceDelete($id) {
+        try {
+            // Hapus jadwal guru ini terlebih dahulu
+            DB::table('jadwals')->where('guru_id', $id)->delete();
+            
+            // Setelah jadwal bersih, hapus gurunya
+            Guru::findOrFail($id)->delete();
+            
+            session()->flash('message', 'Data Guru beserta seluruh jadwalnya berhasil dihapus paksa.');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Gagal hapus paksa: ' . $e->getMessage());
+        }
     }
 
     public function edit($id) {
@@ -60,11 +96,6 @@ class GuruManager extends Component
         $this->mapel = $guru->mapel;
         $this->no_hp = $guru->no_hp;
         $this->isModalOpen = true;
-    }
-
-    public function delete($id) {
-        Guru::find($id)->delete();
-        session()->flash('message', 'Guru dihapus.');
     }
 
     public function render() {
